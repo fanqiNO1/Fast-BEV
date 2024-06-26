@@ -846,6 +846,7 @@ class LoadAnnotations3D(LoadAnnotations):
     def __init__(self,
                  with_bbox_3d=True,
                  with_label_3d=True,
+                 with_car_velocity=True,
                  with_attr_label=False,
                  with_mask_3d=False,
                  with_seg_3d=False,
@@ -873,6 +874,7 @@ class LoadAnnotations3D(LoadAnnotations):
         self.with_seg_3d = with_seg_3d
         self.with_bev_seg = with_bev_seg
         self.seg_3d_dtype = seg_3d_dtype
+        self.with_car_velocity = with_car_velocity
 
     def _load_bboxes_3d(self, results):
         """Private function to load 3D bounding box annotations.
@@ -885,6 +887,12 @@ class LoadAnnotations3D(LoadAnnotations):
         """
         results['gt_bboxes_3d'] = results['ann_info']['gt_bboxes_3d']
         results['bbox3d_fields'].append('gt_bboxes_3d')
+        return results
+    
+    def _load_car_velocity(self, results):
+        '''Car velocity
+        '''
+        results['gt_car_velocity'] = results['ann_info']['gt_car_velocity']
         return results
 
     def _load_bboxes_depth(self, results):
@@ -1012,6 +1020,8 @@ class LoadAnnotations3D(LoadAnnotations):
             results = self._load_semantic_seg_3d(results)
         if self.with_bev_seg:
             results = self._load_bev_seg(results)
+        if self.with_car_velocity:
+            results = self._load_car_velocity(results)
 
         return results
 

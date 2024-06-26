@@ -486,10 +486,15 @@ class NuScenesDataset(Custom3DDataset):
             box_dim=gt_bboxes_3d.shape[-1],
             origin=(0.5, 0.5, 0.5)).convert_to(self.box_mode_3d)
 
+        gt_car_velocity = info['velo']
+        sample_token = info['token']
+        
         anns_results = dict(
             gt_bboxes_3d=gt_bboxes_3d,
             gt_labels_3d=gt_labels_3d,
-            gt_names=gt_names_3d
+            gt_names=gt_names_3d,
+            gt_car_velocity=gt_car_velocity,
+            sample_token=sample_token
         )
         return anns_results
 
