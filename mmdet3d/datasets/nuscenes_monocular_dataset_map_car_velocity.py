@@ -221,11 +221,15 @@ class NuScenesMultiView_Map_Dataset_CarVelocity(NuScenesMultiViewDataset):
 
         new_bevseg_results = None
         new_det_results = None
+        new_car_velocity_results = None
         if eval_seg:
             new_bevseg_results = []
             new_bevseg_gts_road, new_bevseg_gts_lane = [], []
         if eval_det:
             new_det_results = []
+        if eval_car_velocity:
+            new_car_velocity_results = []
+            new_gt_car_velocity = []
 
         for i in range(len(results)):
             if eval_det:
@@ -266,6 +270,11 @@ class NuScenesMultiView_Map_Dataset_CarVelocity(NuScenesMultiViewDataset):
                 new_bevseg_gts_road.append(seg_gt_road)
                 new_bevseg_gts_lane.append(seg_gt_lane)
 
+            if eval_car_velocity:
+                car_velocity = results[i]['car_velocity']
+                new_car_velocity_results.append(car_velocity)
+                new_gt_car_velocity.append(self.get_ann_info(i)['gt_car_velocity'])
+
         if vis_mode:
             print('### vis nus test data ###')
             self.show(new_det_results, 'figs/test', bev_seg_results=new_bevseg_results, thr=0.3, fps=3)
@@ -275,6 +284,10 @@ class NuScenesMultiView_Map_Dataset_CarVelocity(NuScenesMultiViewDataset):
 
         result_dict = dict()
 
+        # eval detection
+        if eval_det:
+            result_dict = super().evaluate(new_det_results, *args, **kwargs)
+
         # eval segmentation
         if eval_seg:
             bev_res_dict = self.evaluate_bev(new_bevseg_results,
@@ -282,9 +295,13 @@ class NuScenesMultiView_Map_Dataset_CarVelocity(NuScenesMultiViewDataset):
                                              new_bevseg_gts_lane)
             for k in bev_res_dict.keys():
                 result_dict[k] = bev_res_dict[k]
-        # eval detection
-        if eval_det:
-            result_dict = super().evaluate(new_det_results, *args, **kwargs)
+        
+        if eval_car_velocity:
+            car_velocity_res = self.evaluate_car_velocity(new_car_velocity_results,
+                                                          new_gt_car_velocity)
+            for k in car_velocity_res.keys():
+                result_dict[k] = car_velocity_res[k]
+
         return result_dict
 
     def evaluate_bev(self,
@@ -328,6 +345,32 @@ class NuScenesMultiView_Map_Dataset_CarVelocity(NuScenesMultiViewDataset):
             res_dict[c] = IoU[idx]
         print("mIoU: {:.3f}".format(sum(IoU) / len(IoU)))
         print('### evaluate BEV segmentation finish ###')
+        return res_dict
+    
+    def evaluate_car_velocity(self, car_velocity_results, new_gt_car_velocity):
+        # metrics: MAE, MSE
+        def mean_absolute_error(y_true, y_pred):
+            y_pred = y_pred.cpu().numpy()
+            return np.mean(np.abs(np.array(y_true) - np.array(y_pred)))
+        def mean_squared_error(y_true, y_pred):
+            y_pred = y_pred.cpu().numpy()
+            return np.mean((np.array(y_true) - np.array(y_pred))**2)
+        mae_vx, mae_vy, mse_vx, mse_vy, mae_v, mse_v = [], [], [], [], [], []
+        for car_velocity, gt_car_velocity in zip(car_velocity_results, new_gt_car_velocity):
+            car_velocity = car_velocity.squeeze(0)
+            mae_vx.append(mean_absolute_error(gt_car_velocity[0], car_velocity[0]))
+            mae_vy.append(mean_absolute_error(gt_car_velocity[1], car_velocity[1]))
+            mse_vx.append(mean_squared_error(gt_car_velocity[0], car_velocity[0]))
+            mse_vy.append(mean_squared_error(gt_car_velocity[1], car_velocity[1]))
+            mae_v.append(mean_absolute_error(gt_car_velocity, car_velocity))
+            mse_v.append(mean_squared_error(gt_car_velocity, car_velocity))
+        res_dict = dict()
+        res_dict['MAE_vx'] = sum(mae_vx) / len(mae_vx)
+        res_dict['MAE_vy'] = sum(mae_vy) / len(mae_vy)
+        res_dict['MAE_v'] = sum(mae_v) / len(mae_v)
+        res_dict['MSE_vx'] = sum(mse_vx) / len(mse_vx)
+        res_dict['MSE_vy'] = sum(mse_vy) / len(mse_vy)
+        res_dict['MSE_v'] = sum(mse_v) / len(mse_v)
         return res_dict
 
 

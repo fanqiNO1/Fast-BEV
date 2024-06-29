@@ -306,7 +306,7 @@ log_config = dict(
     ])
 evaluation = dict(interval=5)
 dist_params = dict(backend='nccl')
-find_unused_parameters = True  # todo: fix number of FPN outputs
+find_unused_parameters = False  # todo: fix number of FPN outputs
 log_level = 'INFO'
 
 load_from = 'pretrained_models/cascade_mask_rcnn_r18_fpn_coco-mstrain_3x_20e_nuim_bbox_mAP_0.5110_segm_mAP_0.4070.pth'
@@ -314,4 +314,4 @@ resume_from = None
 workflow = [('train', 1)]
 
 # fp16 settings, the loss scale is specifically tuned to avoid Nan
-fp16 = dict(loss_scale='dynamic')
+# fp16 = dict(loss_scale='dynamic')

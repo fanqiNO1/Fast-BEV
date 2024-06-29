@@ -81,7 +81,6 @@ class NuScenesMultiViewDataset(MultiViewMixin, NuScenesDataset):
             kwargs.pop('vis_mode')
         
         result_dict = super().evaluate(new_results, *args, **kwargs)
-        print(result_dict)
         return result_dict
     
     @staticmethod
