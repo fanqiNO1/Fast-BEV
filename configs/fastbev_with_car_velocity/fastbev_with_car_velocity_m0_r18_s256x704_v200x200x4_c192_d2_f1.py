@@ -8,14 +8,14 @@ model = dict(
         num_stages=4,
         out_indices=(0, 1, 2, 3),
         frozen_stages=1,
-        norm_cfg=dict(type='SyncBN', requires_grad=True),
+        norm_cfg=dict(type='BN', requires_grad=True),
         norm_eval=True,
         init_cfg=dict(type='Pretrained', checkpoint='torchvision://resnet18'),
         style='pytorch'
     ),
     neck=dict(
         type='FPN',
-        norm_cfg=dict(type='SyncBN', requires_grad=True),
+        norm_cfg=dict(type='BN', requires_grad=True),
         in_channels=[64, 128, 256, 512],
         out_channels=64,
         num_outs=4),
@@ -27,8 +27,8 @@ model = dict(
         num_layers=2,
         stride=2,
         is_transpose=False,
-        fuse=dict(in_channels=64*4*4, out_channels=64*4),
-        norm_cfg=dict(type='SyncBN', requires_grad=True)),
+        fuse=dict(in_channels=64*4, out_channels=64*4),
+        norm_cfg=dict(type='BN', requires_grad=True)),
     seg_head=None,
     loss_car_velocity_weight=0.1,
     bbox_head=dict(
@@ -113,9 +113,9 @@ class_names = [
     'car', 'truck', 'trailer', 'bus', 'construction_vehicle', 'bicycle',
     'motorcycle', 'pedestrian', 'traffic_cone', 'barrier'
 ]
-
 dataset_type = 'NuScenesMultiView_Map_Dataset_CarVelocity'
-data_root = './data/nuscenes/'
+data_root = './data/nuscenes/' #bigdata path
+
 # Input modality for nuScenes dataset, this is consistent with the submission
 # format which requires the information in input_modality.
 input_modality = dict(
@@ -145,11 +145,14 @@ data_config = {
     'pad_color': (0, 0, 0),
 }
 
-# file_client_args = dict(backend='disk')
 file_client_args = dict(backend='disk')
+# file_client_args = dict(
+#     backend='petrel',
+#     path_mapping=dict({
+#         data_root: 'public-1424:s3://openmmlab/datasets/detection3d/nuscenes/'}))
 
 train_pipeline = [
-    dict(type='MultiViewPipeline', sequential=True, n_images=6, n_times=4, transforms=[
+    dict(type='MultiViewPipeline', sequential=False, n_images=6, n_times=4, transforms=[
         dict(
             type='LoadImageFromFile',
             file_client_args=file_client_args)]),
@@ -185,7 +188,7 @@ train_pipeline = [
                                  'gt_bboxes_3d', 'gt_labels_3d',
                                  'gt_bev_seg', 'gt_car_velocity'])]
 test_pipeline = [
-    dict(type='MultiViewPipeline', sequential=True, n_images=6, n_times=4, transforms=[
+    dict(type='MultiViewPipeline', sequential=False, n_images=6, n_times=4, transforms=[
         dict(
             type='LoadImageFromFile',
             file_client_args=file_client_args)]),
@@ -216,9 +219,9 @@ data = dict(
             test_mode=False,
             with_box2d=True,
             box_type_3d='LiDAR',
-            ann_file='data/nuscenes/nuscenes_infos_train_4d_interval3_max60.pkl',
+            ann_file=data_root+'nuscenes_infos_train_4d_interval3_max60.pkl',
             load_interval=1,
-            sequential=True,
+            sequential=False,
             n_times=4,
             train_adj_ids=[1, 3, 5],
             speed_mode='abs_velo',
@@ -240,9 +243,9 @@ data = dict(
         test_mode=True,
         with_box2d=True,
         box_type_3d='LiDAR',
-        ann_file='data/nuscenes/nuscenes_infos_val_4d_interval3_max60.pkl',
+        ann_file=data_root+'nuscenes_infos_val_4d_interval3_max60.pkl',
         load_interval=1,
-        sequential=True,
+        sequential=False,
         n_times=4,
         train_adj_ids=[1, 3, 5],
         speed_mode='abs_velo',
@@ -262,9 +265,9 @@ data = dict(
         test_mode=True,
         with_box2d=True,
         box_type_3d='LiDAR',
-        ann_file='data/nuscenes/nuscenes_infos_val_4d_interval3_max60.pkl',
+        ann_file=data_root+'nuscenes_infos_val_4d_interval3_max60.pkl',
         load_interval=1,
-        sequential=True,
+        sequential=False,
         n_times=4,
         train_adj_ids=[1, 3, 5],
         speed_mode='abs_velo',
@@ -304,14 +307,15 @@ log_config = dict(
         dict(type='TextLoggerHook'),
         dict(type='TensorboardLoggerHook'),
     ])
-evaluation = dict(interval=5)
+evaluation = dict(interval=21)
 dist_params = dict(backend='nccl')
-find_unused_parameters = False  # todo: fix number of FPN outputs
+find_unused_parameters = True  # todo: fix number of FPN outputs
 log_level = 'INFO'
 
 load_from = 'pretrained_models/cascade_mask_rcnn_r18_fpn_coco-mstrain_3x_20e_nuim_bbox_mAP_0.5110_segm_mAP_0.4070.pth'
+# load_from = None
 resume_from = None
 workflow = [('train', 1)]
 
 # fp16 settings, the loss scale is specifically tuned to avoid Nan
-# fp16 = dict(loss_scale='dynamic')
+fp16 = dict(loss_scale='dynamic')
